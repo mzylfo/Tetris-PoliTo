@@ -1,0 +1,136 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000         
+    2 00000000         ; i primi 4 parametri passati dalla funzione sono conten
+                       uti nei registri R0-R4
+    3 00000000         ; se ci fossero pi� di 4 parametri, dopo il quarto son
+                       o all'interno dello stack
+    4 00000000         ; il risultato finale � quello presente all'interno di
+                        R0
+    5 00000000         
+    6 00000000         ;LDR/STR 32 bit (4 byte)
+    7 00000000         ;LDRB/STRB 8 bit (1 byte)
+    8 00000000         ;LDRH/STRH 16 bit (2 byte)
+    9 00000000         ;LDRSB 8 bit (signed 1 byte)
+   10 00000000         ;LDRSH 16 bit (signed 2 byte)
+   11 00000000         ;LDRD/STRD 2*32 bit (two words)
+   12 00000000         ;LDM/SDM multiple registers
+   13 00000000         
+   14 00000000         ;unsigned char 32 bit
+   15 00000000         
+   16 00000000         ;load/store <Rd>, [<Rn>], <offset> Rn è modificato aggi
+                       ungendo l'offset dopo
+   17 00000000         ;load/store <Rd>, [<Rn>, <offset>] Rn non è modificato 
+                       aggiungendo l'offset dopo
+   18 00000000         ;SPACE 1 => alloca 1 byte (usato per riservare spazio pe
+                       r modificare un vettore/variabile)
+   19 00000000         ;DCB alloca uno o più byte
+   20 00000000         ;DCD alloca una o più parole, dove ogni parola è di 32
+                        bit
+   21 00000000         ;DCW alloca una o più halfwords, dove ogni halfword è 
+                       di 16 bit
+   22 00000000         
+   23 00000000         ;prendere l'indirizzo di un vettore: LDR R3, =name_vecto
+                       r
+   24 00000000         ;prendere il contenuto sapendo l'indirizzo: LDR R2, [R3]
+                       
+   25 00000000         
+   26 00000000         ;uso di EQU: name EQU 5
+   27 00000000         
+   28 00000000         ;nostra area di memoria
+   29 00000000                 AREA             my_area, CODE, READWRITE
+   30 00000000         ;nostra area per poter modificare le variabili in memori
+                       a
+   31 00000000         
+   32 00000000                 AREA             asm_functions, CODE, READONLY
+   33 00000000                 EXPORT           name_function_assembler
+   34 00000000         
+   35 00000000         ;nome RN R4
+   36 00000000         ;nome RN R4
+   37 00000000         
+   38 00000000         name_function_assembler
+   39 00000000         
+   40 00000000         ; save current SP for a faster access
+   41 00000000         ; to parameters in the stack
+   42 00000000 46EC            MOV              R12, SP
+   43 00000002         ; save volatile registers
+   44 00000002 E92D 4DF0       STMFD            SP!, {R4-R8, R10-R11, LR}
+   45 00000006         
+   46 00000006 F04F 0400       MOV              R4, #0
+   47 0000000A F04F 0500       MOV              R5, #0
+   48 0000000E F04F 0600       MOV              R6, #0
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+   49 00000012 F04F 0700       MOV              R7, #0
+   50 00000016 F04F 0800       MOV              R8, #0
+   51 0000001A F04F 0900       MOV              R9, #0
+   52 0000001E F04F 0A00       MOV              R10, #0
+   53 00000022 F04F 0B00       MOV              R11, #0
+   54 00000026         ; my code here
+   55 00000026         
+   56 00000026         ; setup a value for R0 to return
+   57 00000026 4628            MOV              R0, R5
+   58 00000028         ; restore volatile registers
+   59 00000028 E8BD 8DF0       LDMFD            SP!, {R4-R8, R10-R11, PC}
+   60 0000002C         
+   61 0000002C         ;definizione literal pool
+   62 0000002C         ;LTORG
+   63 0000002C         
+   64 0000002C         ;my_constant DCB 4,5,5
+   65 0000002C         
+   66 0000002C                 END
+Command Line: --debug --xref --diag_suppress=9931,A1950W --cpu=Cortex-M3 --depe
+nd=.\objects\asm_function.d -o.\objects\asm_function.o -I.\Source -I.\Source\CM
+SIS_core -I.\Source\GLCD -I.\Source\timer -I.\Source\button_EXINT -I.\Source\To
+uchPanel -I.\RTE\_SW_DEBUG -IC:\Users\Matteo\AppData\Local\Arm\Packs\ARM\CMSIS\
+6.2.0\CMSIS\Core\Include -IC:\Users\Matteo\AppData\Local\Arm\Packs\Keil\LPC1700
+_DFP\2.7.2\Device\Include --predefine="__EVAL SETA 1" --predefine="__UVISION_VE
+RSION SETA 543" --predefine="LPC175x_6x SETA 1" --predefine="_RTE_ SETA 1" --li
+st=.\listings\asm_function.lst Source\asm_function.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+my_area 00000000
+
+Symbol: my_area
+   Definitions
+      At line 29 in file Source\asm_function.s
+   Uses
+      None
+Comment: my_area unused
+1 symbol
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+asm_functions 00000000
+
+Symbol: asm_functions
+   Definitions
+      At line 32 in file Source\asm_function.s
+   Uses
+      None
+Comment: asm_functions unused
+name_function_assembler 00000000
+
+Symbol: name_function_assembler
+   Definitions
+      At line 38 in file Source\asm_function.s
+   Uses
+      At line 33 in file Source\asm_function.s
+Comment: name_function_assembler used once
+2 symbols
+337 symbols in table
