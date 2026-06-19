@@ -1,103 +1,104 @@
 # Tetris — LandTiger LPC1768
 
-Implementazione del classico **Tetris** su scheda **LandTiger LPC1768** (microcontrollore ARM Cortex-M3),
-con output grafico su display **GLCD** e input da **joystick** e **pulsanti (EINT)**.
+An implementation of the classic **Tetris** game running on the **LandTiger LPC1768** board
+(ARM Cortex-M3 microcontroller), with graphics rendered on a **GLCD** display and input from
+a **joystick** and **push buttons (EINT)**.
 
-Progetto sviluppato in C in ambiente **Keil µVision** a partire dal sample GLCD/Touch Panel di PowerMCU/AVRman.
+Developed in C using **Keil µVision**, starting from the PowerMCU/AVRman GLCD/Touch Panel sample.
 
-> Modificato da **Matteo Zylfo** — v2.0
+> Modified by **Matteo Zylfo** — v2.0
 
 ---
 
-## Comandi
+## Controls
 
-| Input | Azione |
+| Input | Action |
 |-------|--------|
-| **KEY1** | Start / Pausa / Nuova partita (dopo Game Over) |
-| **KEY2** | Hard drop (caduta istantanea del pezzo) |
-| **Joystick ◄ / ►** | Sposta il pezzo a sinistra / destra |
-| **Joystick ▲** | Ruota il pezzo |
-| **Joystick ▼** | Soft drop (accelera la caduta) |
+| **KEY1** | Start / Pause / New game (after Game Over) |
+| **KEY2** | Hard drop (instant piece drop) |
+| **Joystick ◄ / ►** | Move the piece left / right |
+| **Joystick ▲** | Rotate the piece |
+| **Joystick ▼** | Soft drop (speed up the fall) |
 
 ---
 
-## Architettura
+## Architecture
 
-Il progetto segue il pattern **ISR leggere + main loop**, tipico dei sistemi embedded:
+The project follows the **lightweight ISR + main loop** pattern, typical of embedded systems:
 
-- Le **ISR** (RIT, Timer0, EINT) non eseguono mai logica di gioco né disegno: si limitano a
-  impostare dei **flag `volatile`** (`gravity_event`, `move_l_event`, `rotate_event`, ...).
-- Il **main loop** dorme su `__ASM("wfi")` (Wait For Interrupt) per il risparmio energetico
-  e, ad ogni risveglio, chiama `Tetris_Process_Events()` che legge i flag ed esegue la logica
-  e il rendering sul GLCD.
+- The **ISRs** (RIT, Timer0, EINT) never run game logic or rendering: they simply set
+  **`volatile` flags** (`gravity_event`, `move_l_event`, `rotate_event`, ...).
+- The **main loop** sleeps on `__ASM("wfi")` (Wait For Interrupt) for power saving and,
+  on each wake-up, calls `Tetris_Process_Events()`, which reads the flags and runs the
+  game logic and GLCD rendering.
 
-In questo modo gli interrupt restano cortissimi e tutto il lavoro pesante (disegno su LCD,
-gravità, eliminazione linee) avviene fuori dal contesto di interrupt.
+This keeps interrupts extremely short, while all the heavy work (LCD drawing, gravity,
+line clearing) happens outside the interrupt context.
 
-### Timer e interrupt
+### Timers and interrupts
 
-| Periferica | Periodo | Ruolo |
-|------------|---------|-------|
-| **Timer0** | 1 s (soft drop: ~0,5 s) | Gravità: genera `gravity_event`. `MR0` viene cambiato a runtime per il soft drop |
-| **RIT** | 50 ms | Polling del joystick + debouncing dei pulsanti |
-| **EINT1 / EINT2** | — | Pressione di KEY1 / KEY2 (con debouncing gestito via RIT) |
-
----
-
-## Modello di gioco
-
-- **Board**: matrice `20 × 10` (`matrix_game` per occupazione, `matrix_color` per i colori).
-- **Tetromini**: array costante `tetromino[7][4][4][4]` → 7 pezzi (I, O, T, J, L, S, Z),
-  4 rotazioni ciascuno, su griglia `4 × 4`.
-- **Collisioni**: tutte centralizzate in `can_move(row, col, rot)`, usata per movimento,
-  rotazione e caduta.
-- **Game over**: rilevato quando un nuovo pezzo generato non riesce a entrare nella board.
-
-### Punteggio
-
-| Evento | Punti |
-|--------|-------|
-| Pezzo piazzato | +10 |
-| 1 / 2 / 3 linee | +100 per linea |
-| 4 linee (*Tetris!*) | +600 |
-
-Il record (`TOP`) viene aggiornato automaticamente a fine partita.
+| Peripheral | Period | Role |
+|------------|--------|------|
+| **Timer0** | 1 s (soft drop: ~0.5 s) | Gravity: raises `gravity_event`. `MR0` is changed at runtime for the soft drop |
+| **RIT** | 50 ms | Joystick polling + button debouncing |
+| **EINT1 / EINT2** | — | KEY1 / KEY2 press (debouncing handled via RIT) |
 
 ---
 
-## Struttura del progetto
+## Game model
+
+- **Board**: a `20 × 10` matrix (`matrix_game` for occupancy, `matrix_color` for colors).
+- **Tetrominoes**: constant array `tetromino[7][4][4][4]` → 7 pieces (I, O, T, J, L, S, Z),
+  4 rotations each, on a `4 × 4` grid.
+- **Collisions**: all centralized in `can_move(row, col, rot)`, used for movement,
+  rotation and falling.
+- **Game over**: detected when a newly spawned piece cannot fit into the board.
+
+### Scoring
+
+| Event | Points |
+|-------|--------|
+| Piece placed | +10 |
+| 1 / 2 / 3 lines | +100 per line |
+| 4 lines (*Tetris!*) | +600 |
+
+The high score (`TOP`) is updated automatically at the end of each game.
+
+---
+
+## Project structure
 
 ```
 Source/
-├── sample.c              # main(): init periferiche + main loop
+├── sample.c              # main(): peripheral init + main loop
 ├── tetris/
-│   ├── tetris.c          # logica di gioco, rendering, gestione eventi
-│   └── tetris.h          # prototipi e variabili globali (extern)
-├── RIT/                  # Repetitive Interrupt Timer (polling input)
-├── timer/                # Timer0/2/3 (gravità)
-├── button_EXINT/         # gestione pulsanti via interrupt esterni
-├── joystick/             # init joystick
-├── led/                  # gestione LED
-├── GLCD/                 # driver display grafico
-├── TouchPanel/           # driver touch (non usato nel gioco)
-├── adc/                  # driver ADC
-├── Map/                  # funzioni di supporto
-└── CMSIS_core/           # header CMSIS Cortex-M3
+│   ├── tetris.c          # game logic, rendering, event handling
+│   └── tetris.h          # prototypes and global variables (extern)
+├── RIT/                  # Repetitive Interrupt Timer (input polling)
+├── timer/                # Timer0/2/3 (gravity)
+├── button_EXINT/         # button handling via external interrupts
+├── joystick/             # joystick init
+├── led/                  # LED handling
+├── GLCD/                 # graphic display driver
+├── TouchPanel/           # touch driver (not used in the game)
+├── adc/                  # ADC driver
+├── Map/                  # helper functions
+└── CMSIS_core/           # CMSIS Cortex-M3 headers
 ```
 
 ---
 
 ## Build & Run
 
-1. Aprire il progetto in **Keil µVision** (`sample.uvprojx`).
-2. Compilare il progetto (**F7**).
-3. Caricare sulla scheda LandTiger LPC1768, oppure eseguire nel **simulatore**
-   (la macro `SIMULATOR` in `sample.c` è già definita).
+1. Open the project in **Keil µVision** (`sample.uvprojx`).
+2. Build the project (**F7**).
+3. Flash it onto the LandTiger LPC1768 board, or run it in the **simulator**
+   (the `SIMULATOR` macro in `sample.c` is already defined).
 
 ---
 
-## Autore
+## Author
 
 **Matteo Zylfo** — Politecnico di Torino
 
-Progetto basato sul sample GLCD/Touch Panel originale di PowerMCU / AVRman.
+Based on the original GLCD/Touch Panel sample by PowerMCU / AVRman.
